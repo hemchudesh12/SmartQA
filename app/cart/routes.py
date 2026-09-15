@@ -29,7 +29,7 @@ def view_cart():
     for pid_str, qty in cart.items():
         product = db.session.get(Product, int(pid_str))
         if product:
-            subtotal = product.price * qty + 100
+            subtotal = product.price * qty
             total += subtotal
             items.append({"product": product, "quantity": qty, "subtotal": subtotal})
 
