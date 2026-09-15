@@ -8,17 +8,20 @@ on:
 
 jobs:
   smartqa-tests:
-    name: Run Automated Test Suite
+    name: Run Automated Test Suite & Data Collection
     runs-on: ubuntu-latest
 
     env:
       FLASK_ENV: development
       BASE_URL: http://127.0.0.1:5000
       PYTHONPATH: .
+      COLLECT_DATA: "1"
 
     steps:
-      - name: Checkout Repository
+      - name: Checkout Repository (Full History for Git Collector)
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python 3.10
         uses: actions/setup-python@v5
@@ -48,25 +51,40 @@ jobs:
           echo "Waiting for Flask server to respond on http://127.0.0.1:5000..."
           for i in {1..30}; do
             if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/ | grep -q "200"; then
-              echo "✓ Flask server is UP and responding with HTTP 200 OK!"
+              echo "[OK] Flask server is UP and responding with HTTP 200 OK!"
               exit 0
             fi
             echo "Attempt $i: Server not ready yet, sleeping 1s..."
             sleep 1
           done
-          echo "❌ Flask server failed to start within 30 seconds."
+          echo "[ERROR] Flask server failed to start within 30 seconds."
           exit 1
 
-      - name: Run PyTest Suite
+      - name: Collect Git Metadata (Phase 4 Feature Space)
+        run: |
+          python tools/collect_git_metadata.py
+
+      - name: Run PyTest Suite (Phase 4 Label Collector Active)
         run: |
           pytest -v
 
-      - name: Upload Test Reports & Screenshots
+      - name: Build ML Dataset (Phase 4 Denormalization)
+        if: always()
+        run: |
+          python tools/build_dataset.py
+
+      - name: Validate Dataset Integrity (Phase 4 Quality Gate)
+        if: always()
+        run: |
+          python tools/validate_dataset.py
+
+      - name: Upload SmartQA Data & Reports Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: smartqa-test-reports
+          name: smartqa-data-and-reports
           path: |
+            data/
             reports/report.html
             reports/screenshots/
           retention-days: 14

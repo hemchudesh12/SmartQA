@@ -30,3 +30,10 @@ Thumbs.db
 # Test reports & screenshots
 reports/report.html
 reports/screenshots/
+
+# Phase 4 — Data pipeline
+# dataset.csv is regeneratable from JSONL sources — do NOT commit it
+data/dataset.csv
+# JSONL raw data files ARE committed (they are the source of truth)
+# data/commits.jsonl      ← keep in git
+# data/test_results.jsonl ← keep in git

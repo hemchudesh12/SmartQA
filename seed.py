@@ -192,7 +192,7 @@ def seed():
         print(f"[seed] Inserted {len(PRODUCTS)} products.")
 
         db.session.commit()
-        print("[seed] ✓ Database seeded successfully.")
+        print("[seed] [OK] Database seeded successfully.")
         print()
         print("  Test credentials:")
         print(f"    Email   : {TEST_USER['email']}")

@@ -1,5 +1,9 @@
 import os
 
+BASE_DIR = os.path.abspath(os.path.dirname(__file__))
+INSTANCE_DIR = os.path.join(BASE_DIR, "instance")
+os.makedirs(INSTANCE_DIR, exist_ok=True)
+
 
 class Config:
     """Base configuration shared by all environments."""
@@ -9,7 +13,7 @@ class Config:
     # SQLite DB lives in the instance/ folder, outside the app package
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL",
-        "sqlite:///" + os.path.join(os.path.abspath(os.path.dirname(__file__)), "instance", "smartqa.db"),
+        "sqlite:///" + os.path.join(INSTANCE_DIR, "smartqa.db"),
     )
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 

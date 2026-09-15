@@ -1,0 +1,3 @@
+# This file keeps the data/ directory tracked in git.
+# Raw JSONL files (commits.jsonl, test_results.jsonl) are committed here.
+# dataset.csv is gitignored (regeneratable from JSONL sources).

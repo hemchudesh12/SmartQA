@@ -36,7 +36,7 @@ def check_server():
     sock.close()
     if not reachable:
         pytest.exit(
-            "\n\n❌  Flask server is NOT running.\n"
+            "\n\n[ERROR] Flask server is NOT running.\n"
             "   Start it first:  python run.py\n"
             "   Then re-run:     pytest\n",
             returncode=1,
