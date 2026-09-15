@@ -37,3 +37,14 @@ data/dataset.csv
 # JSONL raw data files ARE committed (they are the source of truth)
 # data/commits.jsonl      ← keep in git
 # data/test_results.jsonl ← keep in git
+
+# Phase 5 — Feature engineering outputs (regeneratable)
+data/features.csv
+data/features_encoded.csv
+
+# Phase 6 — ML model artifacts (regeneratable)
+models/failure_predictor.joblib
+models/model_metadata.json
+data/predictions.csv
+data/evaluation_report.json
+

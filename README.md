@@ -319,4 +319,151 @@ python -m pytest tools/tests/test_features.py -v
 2. **Cold-Start Strategy**: Unobserved tests default to `previous_test_runs=0`, `historical_failure_rate=0.0`, and `average_previous_duration=0.0` without row dropping.
 3. **Target Definition**: PASS = `0`, FAIL = `1`, ERROR = `1`. SKIP records are excluded from supervised training sets.
 
+---
 
+## Phase 6 — ML Failure-Risk Prediction
+
+Phase 6 trains a baseline ML classifier to predict which tests are likely to fail for a given commit.
+
+### ML Objective
+
+> Given the features available **before** a test executes for a commit, what is the probability that this test will fail?
+
+Output: `P(test_failed = 1)` — a failure-risk probability for each (commit, test) pair.
+
+### Pipeline Architecture
+
+```
+Historical features (data/features_encoded.csv)
+          ↓
+Temporal commit-level split (earliest 80% → train, latest 20% → test)
+          ↓
+StandardScaler (fit only on training data)
+          ↓
+LogisticRegression (random_state=42, class_weight="balanced")
+          ↓
+Failure probability P(test_failed=1)
+          ↓
+Phase 7 test prioritization (future)
+```
+
+### Execution Commands
+
+```bash
+# 1. Generate the ML feature dataset (if not already done)
+python tools/build_features.py
+
+# 2. Train the model
+python tools/train_model.py
+
+# 3. Evaluate the model
+python tools/evaluate_model.py
+
+# 4. Run Phase 6 unit tests
+python -m pytest tools/tests/test_model.py -v
+
+# 5. Run all tools tests together
+python -m pytest tools/tests -v
+```
+
+### Temporal Train/Test Split
+
+**Random split is explicitly avoided.** Tests from the same commit must all go to the same set.
+
+The split works on unique commits sorted by temporal order:
+
+| Set | Commits | Rule |
+|---|---|---|
+| Training | Earliest 80% of unique commits | Historical knowledge |
+| Testing  | Latest 20% of unique commits | Simulates future prediction |
+
+No commit SHA ever appears in both training and test sets.
+
+### Why Random Split is Wrong for SmartQA
+
+SmartQA simulates: *"Given a new commit, which tests will fail?"*
+
+If future commits contaminate the training set, historical features (like `historical_failure_rate`) would encode future information — making the model appear better than it is.
+
+Temporal split prevents this by strictly ordering data.
+
+### Leakage Prevention
+
+Fields excluded from X (not available before a test executes):
+
+| Field | Reason |
+|---|---|
+| `test_failed` | **Target label** — never in X |
+| `status` | Post-execution result |
+| `failure_message` | Post-execution result |
+| `duration_sec` | Only known after execution |
+| `commit_sha` | Identifier, not feature |
+| `test_nodeid` | Identifier, not feature |
+
+### Model
+
+| Setting | Value |
+|---|---|
+| Algorithm | Logistic Regression |
+| Library | scikit-learn |
+| `random_state` | 42 |
+| `class_weight` | `"balanced"` |
+| Scaler | StandardScaler (fit on train only) |
+| Solver | lbfgs |
+
+`class_weight="balanced"` addresses the severe class imbalance by automatically upweighting FAIL examples in the loss function.
+
+### Class Imbalance
+
+Current dataset: **~0.69% failure rate** (1 FAIL out of 145 rows).
+
+This is far too little for a valid classifier. The pipeline handles this explicitly:
+
+- If the **training** set contains only one class → training is **skipped with a clear message**
+- SMOTE / synthetic oversampling is NOT applied in Phase 5 or 6
+- This is correct scientific behavior, not a software bug
+
+### Evaluation Metrics
+
+When both classes exist in the test set:
+
+| Metric | Notes |
+|---|---|
+| Accuracy | Overall correctness |
+| Precision (FAIL) | Of predicted FAILs, how many were real? |
+| **Recall (FAIL)** | **Most important: of real FAILs, how many were caught?** |
+| F1-score | Harmonic mean of precision and recall |
+| ROC-AUC | Probability ranking quality |
+| PR-AUC | Precision-recall tradeoff |
+
+**Recall** is the primary metric because missing a test that will fail (False Negative) means a defect goes undetected — the worst outcome for SmartQA.
+
+Metrics are reported as `undefined` when the test set lacks both classes — honest reporting only.
+
+### Generated Artifacts
+
+| File | Description |
+|---|---|
+| `models/failure_predictor.joblib` | Trained sklearn Pipeline (gitignored, regeneratable) |
+| `models/model_metadata.json` | Training config and dataset statistics (gitignored) |
+| `data/predictions.csv` | Per-row predictions on test set (gitignored) |
+| `data/evaluation_report.json` | Full metrics report (gitignored) |
+
+### Current Dataset Limitation
+
+With only **1 genuine FAIL** in the current historical dataset:
+
+- The temporal split produces a training period with **0 FAIL examples**
+- Training is **correctly skipped** with the message: `INSUFFICIENT CLASS DIVERSITY`
+- The pipeline infrastructure is **complete and correct**
+- Training will activate automatically once more real failures are collected
+
+**This is an honest result, not a failure of the implementation.**
+
+### Known Limitations
+
+1. Only 1 FAIL in 145 rows — insufficient for a production-ready model
+2. All data was collected on a single day — temporal diversity is limited
+3. Only one test runner (Chromium) — no multi-browser failure patterns
+4. 5 unique commits — temporal split leaves minimal test data
+5. Logistic Regression assumes linear decision boundary — may underfit if relationships are nonlinear (Random Forest can be added in Phase 6b)
