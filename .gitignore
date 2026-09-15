@@ -48,3 +48,8 @@ models/model_metadata.json
 data/predictions.csv
 data/evaluation_report.json
 
+# Phase 7 — Prioritization outputs (regeneratable)
+data/prioritized_tests.csv
+data/prioritized_nodeids.txt
+
+

@@ -467,3 +467,154 @@ With only **1 genuine FAIL** in the current historical dataset:
 3. Only one test runner (Chromium) — no multi-browser failure patterns
 4. 5 unique commits — temporal split leaves minimal test data
 5. Logistic Regression assumes linear decision boundary — may underfit if relationships are nonlinear (Random Forest can be added in Phase 6b)
+
+---
+
+## Phase 7 — Test Prioritization
+
+Phase 7 uses the failure probabilities produced by Phase 6 to determine the execution order of the test suite. **High-risk tests execute first.**
+
+### What Prioritization Means
+
+Prioritization does **not** skip tests. It reorders them.
+
+> The full test suite always executes. Tests predicted to fail are moved to the front so that failures are discovered earlier in the CI run.
+
+### Why Failure Probability Drives Priority
+
+SmartQA's ML model outputs `P(test_failed = 1)` for each test given a commit's features. A higher probability means the test is more likely to fail for this commit. Running these tests first gives the fastest signal about regressions.
+
+### Ranking Algorithm
+
+```
+PRIMARY:    predicted_failure_probability  DESC  (highest risk first)
+TIE-BREAK:  test_nodeid                    ASC   (alphabetical, deterministic)
+```
+
+**No random ordering. No dictionary insertion order. No shuffling.**
+
+#### Example
+
+| Test | Predicted Probability |
+|---|---|
+| `test_B` | 0.81 |
+| `test_D` | 0.67 |
+| `test_C` | 0.44 |
+| `test_A` | 0.12 |
+
+**Before prioritization (default pytest order):**
+```
+test_A → test_B → test_C → test_D
+```
+
+**After prioritization:**
+```
+test_B → test_D → test_C → test_A
+```
+
+The system executes tests predicted to be most likely to fail first.
+
+### Missing Prediction Policy
+
+Some tests may not have a prediction (new tests, historical gaps):
+
+| Situation | Placement |
+|---|---|
+| Valid probability available | Ranked by probability (first group) |
+| No prediction / invalid probability | Appended after all predicted tests |
+| Multiple unpredicted tests | Sorted alphabetically by test_nodeid |
+
+**No test is ever dropped.**
+
+### Invalid Probability Handling
+
+The engine validates every probability value. Invalid values are treated as missing.
+
+Invalid examples: `NaN`, empty string, negative, `> 1.0`, non-numeric.
+
+### No-Test-Loss Guarantee
+
+The prioritizer explicitly validates:
+
+- `prioritized_count == discovered_count`
+- No duplicate test node IDs
+- All discovered tests appear in output
+
+If validation fails, the script exits with a non-zero code.
+
+### Execution Commands
+
+```bash
+# 1. Generate prioritized test order (from Phase 6 predictions)
+python tools/prioritize_tests.py
+
+# 2. Validate the generated prioritization
+python tools/validate_prioritization.py
+
+# 3. Run Phase 7 unit tests
+python -m pytest tools/tests/test_prioritization.py -v
+
+# 4. Run the full tool test suite (Phase 4 + 5 + 6 + 7)
+python -m pytest tools/tests -v
+```
+
+### CI Integration
+
+The GitHub Actions workflow integrates prioritization into the CI pipeline:
+
+```
+Build Phase 5 features
+    ↓
+Train Phase 6 predictor (continue-on-error)
+    ↓
+Generate prioritized order (continue-on-error)
+    ↓
+If prioritized_nodeids.txt exists:
+    Run pytest with tests in priority order
+Else:
+    Fallback: Run normal pytest (full suite)
+```
+
+**The full test suite always runs.** Prioritization only changes the order.
+
+### Fallback Behavior
+
+If predictions or prioritization cannot be generated (e.g., model not yet trained):
+
+```
+[SmartQA] Prioritization unavailable. Falling back to baseline pytest.
+```
+
+The CI pipeline uses `continue-on-error: true` for Phase 6/7 steps so that a missing model never blocks CI.
+
+### Determinism
+
+Given identical predictions and identical discovered tests, the priority order is always identical. This is verified by automated tests.
+
+### Distinction: Prediction vs. Prioritization
+
+| Phase 6 — Prediction | Phase 7 — Prioritization |
+|---|---|
+| "How likely is this test to fail?" | "In what order should tests execute?" |
+| Output: `P(test_failed = 1)` | Output: ranked list of test node IDs |
+| One-time model training | Per-run ordering decision |
+
+### Leakage Rule
+
+`actual_test_failed` (historical outcome) is **never used** as a ranking signal. Only `predicted_failure_probability` drives priority order.
+
+This is enforced by the prioritization engine design: the `prioritize()` function receives only the predicted probabilities, never the actual historical labels.
+
+### Generated Artifacts
+
+| File | Description |
+|---|---|
+| `data/prioritized_tests.csv` | Full ranked test list with probabilities (gitignored) |
+| `data/prioritized_nodeids.txt` | One test node ID per line in priority order (gitignored, used by CI) |
+
+### Known Limitations
+
+1. Phase 6 model training is currently skipped (insufficient failure data) — prioritization runs in "all-unpredicted" mode, producing alphabetical ordering
+2. Alphabetical fallback is still deterministic and correct — all tests are preserved
+3. Test discovery requires Python environment with test dependencies installed
+4. Shell array approach in CI uses `mapfile` (bash-specific, standard on ubuntu-latest)

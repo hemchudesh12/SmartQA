@@ -64,9 +64,36 @@ jobs:
         run: |
           python tools/collect_git_metadata.py
 
-      - name: Run PyTest Suite (Phase 4 Label Collector Active)
+      - name: Build Feature Dataset (Phase 5)
+        if: always()
         run: |
-          pytest -v
+          python tools/build_features.py
+
+      - name: Train Failure Predictor (Phase 6)
+        if: always()
+        continue-on-error: true
+        run: |
+          python tools/train_model.py
+
+      - name: Generate Prioritized Test Order (Phase 7)
+        if: always()
+        id: prioritize
+        continue-on-error: true
+        run: |
+          python tools/prioritize_tests.py
+
+      - name: Run PyTest Suite — Prioritized Order (Phase 7)
+        run: |
+          # If a prioritized node-id file was generated, use it.
+          # Otherwise fall back to normal pytest discovery.
+          if [ -f data/prioritized_nodeids.txt ] && [ -s data/prioritized_nodeids.txt ]; then
+            echo "[SmartQA] Running tests in PRIORITIZED order."
+            mapfile -t TESTS < data/prioritized_nodeids.txt
+            python -m pytest "${TESTS[@]}" -v --html=reports/report.html --self-contained-html -p automation.conftest_collector
+          else
+            echo "[SmartQA] Prioritization unavailable. Falling back to baseline pytest."
+            pytest -v
+          fi
 
       - name: Build ML Dataset (Phase 4 Denormalization)
         if: always()
