@@ -246,12 +246,77 @@ Every push and pull request triggers an automated CI pipeline via **GitHub Actio
 
 ---
 
-## Future SmartQA ML Integration (Phase 4+)
+## Phase 4 — Data Collection & Validation Pipeline
 
-With a reliable CI execution pipeline established, SmartQA collects historical test run results to:
-1. Analyze code changes per commit.
-2. Map source diffs to failure risks.
-3. Predict high-risk tests using ML models (Logistic Regression, Random Forest).
-4. Prioritize and execute risky tests first.
-5. Measure APFD (Average Percentage of Faults Detected).
+SmartQA includes an automated historical data collection pipeline for capturing commit metadata and test execution metrics:
+
+1. **Commit Metadata Collection**: `python tools/collect_git_metadata.py` extracts lines added/deleted, changed files, author, and commit messages into `data/commits.jsonl`.
+2. **Test Result Capture**: PyTest hooks in `automation/conftest.py` capture test durations, statuses (PASS/FAIL/SKIP/ERROR), and metadata into `data/test_results.jsonl`.
+3. **Flat Dataset Compilation**: `python tools/build_dataset.py` joins commits and test results on `commit_sha` to output `data/dataset.csv`.
+4. **Data Integrity Validation**: `python tools/validate_dataset.py` validates referential integrity, schemas, and status values.
+
+---
+
+## Phase 5 — Feature Engineering & ML Dataset Pipeline
+
+Phase 5 transforms validated Phase 4 historical execution data into a temporal, machine-learning-ready feature dataset.
+
+### Pipeline Execution Commands
+
+```bash
+# 1. Generate engineered feature datasets
+python tools/build_features.py
+
+# 2. Validate feature dataset integrity and schema rules
+python tools/validate_features.py
+
+# 3. Run unit tests for feature extraction and leakage prevention
+python -m pytest tools/tests/test_features.py -v
+```
+
+### Generated Datasets
+
+- `data/features.csv`: Human-readable engineered dataset containing commit, test, historical, and interaction features.
+- `data/features_encoded.csv`: Machine-ready numerical dataset prepared for Phase 6 model training.
+
+### Feature Categories & Dictionary
+
+| Category | Feature Name | Type | Description | Leakage Safe? |
+|---|---|---|---|---|
+| **Commit** | `lines_added` | Int | Number of lines inserted in commit | Yes |
+| **Commit** | `lines_deleted` | Int | Number of lines removed in commit | Yes |
+| **Commit** | `total_lines_changed` | Int | Total lines added + deleted | Yes |
+| **Commit** | `changed_file_count` | Int | Count of files modified | Yes |
+| **Commit** | `commit_message_length` | Int | Character count of commit message | Yes |
+| **Commit** | `commit_message_word_count` | Int | Word count of commit message | Yes |
+| **Commit** | `has_fix_keyword` | Binary | 1 if message contains fix/patch keywords | Yes |
+| **Commit** | `has_feature_keyword` | Binary | 1 if message contains feat/feature keywords | Yes |
+| **Commit** | `has_refactor_keyword` | Binary | 1 if message contains refactor/clean keywords | Yes |
+| **Commit** | `has_bug_keyword` | Binary | 1 if message contains bug/issue/fail keywords | Yes |
+| **Commit** | `has_test_keyword` | Binary | 1 if message contains test/coverage keywords | Yes |
+| **Commit** | `changed_python_file_count` | Int | Number of `.py` files changed | Yes |
+| **Commit** | `changed_test_file_count` | Int | Number of test files changed | Yes |
+| **Commit** | `changed_app_file_count` | Int | Number of `app/` files changed | Yes |
+| **Test** | `test_name_length` | Int | Character length of test function name | Yes |
+| **Test** | `test_name_word_count` | Int | Word count of test function name | Yes |
+| **Test** | `is_smoke_test` | Binary | 1 if tagged `@pytest.mark.smoke` | Yes |
+| **Test** | `is_regression_test` | Binary | 1 if tagged `@pytest.mark.regression` | Yes |
+| **Historical** | `previous_test_runs` | Int | Total runs of test prior to current commit | Yes |
+| **Historical** | `previous_failures` | Int | Total failures of test prior to current commit | Yes |
+| **Historical** | `historical_failure_rate` | Float | `previous_failures / previous_test_runs` (0.0 if cold start) | Yes |
+| **Historical** | `previous_run_failure_rate` | Float | Failure rate of immediately preceding run | Yes |
+| **Historical** | `average_previous_duration` | Float | Mean duration (sec) of prior executions | Yes |
+| **Historical** | `previous_duration_variance` | Float | Variance of prior execution durations | Yes |
+| **Historical** | `days_since_previous_execution` | Float | Days elapsed since prior test run | Yes |
+| **Interaction** | `test_file_changed` | Binary | 1 if test file was modified in commit | Yes |
+| **Interaction** | `test_area_changed` | Binary | 1 if test domain/module was modified in commit | Yes |
+| **Interaction** | `commit_size_x_hist_failure_rate` | Float | `total_lines_changed * historical_failure_rate` | Yes |
+| **Target** | `test_failed` | Binary | **Target Label**: `0` for PASS, `1` for FAIL/ERROR (SKIP excluded) | Target |
+
+### Key Design & Data Integrity Principles
+
+1. **Temporal Leakage Safeguard**: Historical features are calculated strictly using observations recorded *prior* to the current commit. Current row outcomes never contaminate historical counters.
+2. **Cold-Start Strategy**: Unobserved tests default to `previous_test_runs=0`, `historical_failure_rate=0.0`, and `average_previous_duration=0.0` without row dropping.
+3. **Target Definition**: PASS = `0`, FAIL = `1`, ERROR = `1`. SKIP records are excluded from supervised training sets.
+
 
