@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Search{% if query %}: {{ query }}{% endif %} — SmartQA Store{% endblock %}
+
+{% block content %}
+
+<div class="search-header" data-testid="search-page">
+  <h1>Search Products</h1>
+  {% if query %}
+    <p data-testid="search-query-label">
+      Results for <strong>"{{ query }}"</strong>
+      — {{ results|length }} product{{ 's' if results|length != 1 else '' }} found
+    </p>
+  {% endif %}
+</div>
+
+<!-- Standalone search form -->
+<form class="search-bar-standalone" action="{{ url_for('products.search') }}" method="get"
+      data-testid="search-form" role="search">
+  <input
+    type="text"
+    name="q"
+    value="{{ query }}"
+    placeholder="Search by product name…"
+    data-testid="search-input"
+    aria-label="Search products"
+  />
+  <button type="submit" data-testid="search-button">Search</button>
+</form>
+
+<!-- Results -->
+{% if query %}
+  {% if results %}
+    <div class="product-grid" data-testid="search-results">
+      {% for product in results %}
+      <div class="product-card" data-testid="search-result-{{ product.id }}">
+
+        <span class="category-tag">{{ product.category }}</span>
+
+        <h3 data-testid="search-result-name-{{ product.id }}">{{ product.name }}</h3>
+
+        <p class="price" data-testid="search-result-price-{{ product.id }}">
+          ₹{{ "%.2f"|format(product.price) }}
+        </p>
+
+        {% if product.in_stock %}
+          <span class="stock-ok">In Stock</span>
+        {% else %}
+          <span class="stock-out">Out of Stock</span>
+        {% endif %}
+
+        <div class="card-actions">
+          <a href="{{ url_for('products.product_detail', product_id=product.id) }}"
+             class="btn btn-outline btn-sm"
+             data-testid="search-view-{{ product.id }}">
+            Details
+          </a>
+
+          {% if product.in_stock %}
+            <form method="post" action="{{ url_for('cart.add_to_cart', product_id=product.id) }}">
+              <button type="submit" class="btn btn-primary btn-sm"
+                      data-testid="search-add-cart-{{ product.id }}">
+                Add to Cart
+              </button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="empty-state" data-testid="search-no-results">
+      <p>No products found for <strong>"{{ query }}"</strong>.</p>
+      <a href="{{ url_for('products.product_list') }}" class="btn btn-secondary">Browse All Products</a>
+    </div>
+  {% endif %}
+
+{% else %}
+  <div class="empty-state" data-testid="search-empty-query">
+    <p>Enter a search term above to find products.</p>
+  </div>
+{% endif %}
+
+{% endblock %}

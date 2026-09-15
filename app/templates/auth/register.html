@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Register — SmartQA Store{% endblock %}
+
+{% block content %}
+<div class="form-card" data-testid="register-page">
+  <h2>Create Account</h2>
+
+  <form method="post" action="{{ url_for('auth.register') }}"
+        data-testid="register-form" novalidate>
+
+    <div class="form-group">
+      <label for="register-name">Full Name</label>
+      <input
+        type="text"
+        id="register-name"
+        name="name"
+        placeholder="Jane Doe"
+        autocomplete="name"
+        required
+        data-testid="register-name"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="register-email">Email address</label>
+      <input
+        type="email"
+        id="register-email"
+        name="email"
+        placeholder="you@example.com"
+        autocomplete="email"
+        required
+        data-testid="register-email"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="register-password">Password <span class="text-muted">(min 6 characters)</span></label>
+      <input
+        type="password"
+        id="register-password"
+        name="password"
+        placeholder="Choose a password"
+        autocomplete="new-password"
+        required
+        data-testid="register-password"
+      />
+    </div>
+
+    <div class="form-group">
+      <label for="register-confirm">Confirm Password</label>
+      <input
+        type="password"
+        id="register-confirm"
+        name="confirm_password"
+        placeholder="Repeat your password"
+        autocomplete="new-password"
+        required
+        data-testid="register-confirm-password"
+      />
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-block mt-2"
+            data-testid="register-button">
+      Create Account
+    </button>
+  </form>
+
+  <p class="form-footer mt-2">
+    Already have an account?
+    <a href="{{ url_for('auth.login') }}" data-testid="login-link">Sign in</a>
+  </p>
+</div>
+{% endblock %}

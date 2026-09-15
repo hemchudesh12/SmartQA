@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile — SmartQA Store{% endblock %}
+
+{% block content %}
+
+<h1 class="section-title" data-testid="profile-heading">My Profile</h1>
+
+<div class="profile-layout">
+
+  <!-- ── Profile card ───────────────────────────────────────────── -->
+  <div class="profile-card" data-testid="profile-card">
+
+    <div class="profile-avatar" data-testid="profile-avatar"
+         aria-hidden="true">
+      {{ user.name[0] | upper }}
+    </div>
+
+    <div class="profile-info">
+      <p><strong>Name:</strong>
+        <span data-testid="profile-name">{{ user.name }}</span>
+      </p>
+      <p><strong>Email:</strong>
+        <span data-testid="profile-email">{{ user.email }}</span>
+      </p>
+      <p><strong>Member since:</strong>
+        <span data-testid="profile-joined">
+          {{ user.created_at.strftime("%d %b %Y") }}
+        </span>
+      </p>
+    </div>
+
+    <hr style="margin: 1.25rem 0;">
+
+    <h2 style="font-size: 1rem; margin-bottom: 0.75rem;">Update Name</h2>
+
+    <form method="post" action="{{ url_for('profile.update_profile') }}"
+          data-testid="profile-update-form">
+      <div class="form-group">
+        <label for="profile-name-input">Full Name</label>
+        <input
+          type="text"
+          id="profile-name-input"
+          name="name"
+          value="{{ user.name }}"
+          required
+          data-testid="profile-name-input"
+        />
+      </div>
+      <button type="submit" class="btn btn-primary btn-block"
+              data-testid="profile-update-button">
+        Update Profile
+      </button>
+    </form>
+
+  </div>
+
+  <!-- ── Order history ──────────────────────────────────────────── -->
+  <div class="order-history-section" data-testid="order-history">
+    <h2>Order History</h2>
+
+    {% if orders %}
+      {% for order in orders | sort(attribute='created_at', reverse=True) %}
+      <div class="order-card" data-testid="order-card-{{ order.id }}">
+
+        <div class="order-card-header">
+          <span>
+            <strong data-testid="order-id-{{ order.id }}">Order #{{ order.id }}</strong>
+            &mdash; {{ order.created_at.strftime("%d %b %Y, %I:%M %p") }}
+          </span>
+          <span class="status-badge status-{{ order.status }}"
+                data-testid="order-status-{{ order.id }}">
+            {{ order.status | capitalize }}
+          </span>
+        </div>
+
+        <div class="order-card-body">
+          {% for item in order.items %}
+            <div class="item-row" data-testid="order-item-{{ order.id }}-{{ item.product_id }}">
+              <span>{{ item.product.name }} × {{ item.quantity }}</span>
+              <span>₹{{ "%.2f"|format(item.subtotal) }}</span>
+            </div>
+          {% endfor %}
+
+          <div class="item-row fw-bold" style="padding-top: 0.5rem; border-top: 1px solid #eee; margin-top: 0.5rem;">
+            <span>Total</span>
+            <span data-testid="order-total-{{ order.id }}">₹{{ "%.2f"|format(order.total) }}</span>
+          </div>
+        </div>
+
+      </div>
+      {% endfor %}
+
+    {% else %}
+      <div class="empty-state" data-testid="no-orders">
+        <p>You haven't placed any orders yet.</p>
+        <a href="{{ url_for('products.product_list') }}" class="btn btn-primary"
+           data-testid="shop-from-profile">Browse Products</a>
+      </div>
+    {% endif %}
+
+  </div>
+
+</div>
+
+{% endblock %}

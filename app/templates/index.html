@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}SmartQA Demo Store — Home{% endblock %}
+
+{% block content %}
+
+<div class="hero" data-testid="home-hero">
+  <h1>SmartQA Demo Store</h1>
+  <p>A minimal e-commerce application used as the <strong>System Under Test</strong> for SmartQA.</p>
+  <a href="{{ url_for('products.product_list') }}" class="btn btn-primary btn-lg"
+     data-testid="hero-browse-products">
+    Browse All Products
+  </a>
+</div>
+
+{% if featured %}
+<h2 class="section-title" data-testid="featured-heading">Featured Products</h2>
+<div class="product-grid" data-testid="featured-grid">
+  {% for product in featured %}
+  <div class="product-card" data-testid="featured-card-{{ product.id }}">
+    <span class="category-tag">{{ product.category }}</span>
+    <h3 data-testid="featured-name-{{ product.id }}">{{ product.name }}</h3>
+    <p class="price" data-testid="featured-price-{{ product.id }}">₹{{ "%.2f"|format(product.price) }}</p>
+
+    {% if product.in_stock %}
+      <span class="stock-ok" data-testid="featured-stock-{{ product.id }}">In Stock</span>
+    {% else %}
+      <span class="stock-out" data-testid="featured-stock-{{ product.id }}">Out of Stock</span>
+    {% endif %}
+
+    <div class="card-actions">
+      <a href="{{ url_for('products.product_detail', product_id=product.id) }}"
+         class="btn btn-outline btn-sm" data-testid="featured-view-{{ product.id }}">
+        Details
+      </a>
+
+      {% if product.in_stock %}
+        <form method="post" action="{{ url_for('cart.add_to_cart', product_id=product.id) }}">
+          <button type="submit" class="btn btn-primary btn-sm"
+                  data-testid="featured-add-cart-{{ product.id }}">
+            Add to Cart
+          </button>
+        </form>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<div class="text-center mt-3">
+  <a href="{{ url_for('products.product_list') }}" class="btn btn-secondary"
+     data-testid="home-view-all">View All Products</a>
+</div>
+{% endif %}
+
+{% endblock %}

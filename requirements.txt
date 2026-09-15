@@ -1,0 +1,9 @@
+Flask==3.0.3
+Flask-SQLAlchemy==3.1.1
+Flask-Login==0.6.3
+
+# Phase 2 — Automation
+pytest==8.2.2
+playwright==1.44.0
+pytest-playwright==0.5.0
+pytest-html==4.1.1

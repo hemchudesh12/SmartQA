@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Flask instance folder (contains SQLite DB)
+instance/
+
+# Environment variables
+.env
+.flaskenv
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test reports & screenshots
+reports/report.html
+reports/screenshots/

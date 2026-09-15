@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}{{ product.name }} — SmartQA Store{% endblock %}
+
+{% block content %}
+
+<p class="text-muted mb-2">
+  <a href="{{ url_for('products.product_list') }}" data-testid="breadcrumb-products">← Products</a>
+  &rsaquo; {{ product.category }}
+  &rsaquo; {{ product.name }}
+</p>
+
+<div class="product-detail" data-testid="product-detail">
+
+  <!-- Image placeholder -->
+  <div class="product-detail-image" data-testid="product-image">
+    <span aria-hidden="true">
+      {% if product.category == "Electronics" %}🔌
+      {% elif product.category == "Accessories" %}🎒
+      {% elif product.category == "Home" %}🏠
+      {% else %}📦{% endif %}
+    </span>
+  </div>
+
+  <!-- Product info -->
+  <div data-testid="product-info">
+
+    <p class="text-muted" data-testid="product-category">{{ product.category }}</p>
+
+    <h1 data-testid="product-name">{{ product.name }}</h1>
+
+    <p class="price" data-testid="product-price">₹{{ "%.2f"|format(product.price) }}</p>
+
+    <p class="description" data-testid="product-description">{{ product.description }}</p>
+
+    <p class="meta">
+      <strong>Stock:</strong>
+      {% if product.in_stock %}
+        <span class="stock-ok" data-testid="product-stock">Available ({{ product.stock }} left)</span>
+      {% else %}
+        <span class="stock-out" data-testid="product-stock">Out of Stock</span>
+      {% endif %}
+    </p>
+
+    <div class="card-actions mt-2">
+      {% if product.in_stock %}
+        <form method="post" action="{{ url_for('cart.add_to_cart', product_id=product.id) }}">
+          <button type="submit" class="btn btn-primary"
+                  data-testid="add-to-cart-button">
+            Add to Cart
+          </button>
+        </form>
+      {% else %}
+        <button class="btn btn-secondary" disabled
+                data-testid="add-to-cart-button-disabled">
+          Out of Stock
+        </button>
+      {% endif %}
+
+      <a href="{{ url_for('products.product_list') }}" class="btn btn-outline"
+         data-testid="back-to-products">
+        ← Back to Products
+      </a>
+    </div>
+
+  </div>
+</div>
+
+{% endblock %}

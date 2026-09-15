@@ -1,0 +1,73 @@
+name: SmartQA Automated Test Pipeline
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  smartqa-tests:
+    name: Run Automated Test Suite
+    runs-on: ubuntu-latest
+
+    env:
+      FLASK_ENV: development
+      BASE_URL: http://127.0.0.1:5000
+      PYTHONPATH: .
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright Chromium & OS Dependencies
+        run: |
+          playwright install --with-deps chromium
+
+      - name: Seed Database
+        run: |
+          python seed.py
+
+      - name: Start Flask Application Server
+        run: |
+          python run.py &
+
+      - name: Wait for Flask Server Readiness
+        run: |
+          echo "Waiting for Flask server to respond on http://127.0.0.1:5000..."
+          for i in {1..30}; do
+            if curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:5000/ | grep -q "200"; then
+              echo "✓ Flask server is UP and responding with HTTP 200 OK!"
+              exit 0
+            fi
+            echo "Attempt $i: Server not ready yet, sleeping 1s..."
+            sleep 1
+          done
+          echo "❌ Flask server failed to start within 30 seconds."
+          exit 1
+
+      - name: Run PyTest Suite
+        run: |
+          pytest -v
+
+      - name: Upload Test Reports & Screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: smartqa-test-reports
+          path: |
+            reports/report.html
+            reports/screenshots/
+          retention-days: 14
+          if-no-files-found: warn

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Order Confirmed — SmartQA Store{% endblock %}
+
+{% block content %}
+
+<div class="success-card" data-testid="order-success">
+
+  <div class="success-icon">✅</div>
+
+  <h1 data-testid="success-heading">Order Placed!</h1>
+
+  <p>Thank you, <strong>{{ order.full_name }}</strong>. Your order has been confirmed.</p>
+
+  <div class="order-detail-box" data-testid="order-details">
+    <div class="row">
+      <span>Order ID</span>
+      <strong data-testid="order-id">#{{ order.id }}</strong>
+    </div>
+    <div class="row">
+      <span>Status</span>
+      <span class="status-badge status-{{ order.status }}"
+            data-testid="order-status">{{ order.status | capitalize }}</span>
+    </div>
+    <div class="row">
+      <span>Payment</span>
+      <span data-testid="order-payment">
+        {{ "Cash on Delivery" if order.payment_method == "cod" else "Demo Card" }}
+      </span>
+    </div>
+    <div class="row">
+      <span>Shipping to</span>
+      <span data-testid="order-address">{{ order.city }}, {{ order.postal_code }}</span>
+    </div>
+    <div class="row">
+      <span><strong>Total Paid</strong></span>
+      <strong data-testid="order-total">₹{{ "%.2f"|format(order.total) }}</strong>
+    </div>
+  </div>
+
+  <!-- Order items -->
+  <div style="text-align:left; margin-bottom: 1.5rem;">
+    {% for item in order.items %}
+    <div class="row" style="padding: 0.3rem 0; border-bottom: 1px solid #eee;"
+         data-testid="order-item-{{ item.product_id }}">
+      <span>{{ item.product.name }} × {{ item.quantity }}</span>
+      <span>₹{{ "%.2f"|format(item.subtotal) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div style="display:flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+    <a href="{{ url_for('products.product_list') }}" class="btn btn-primary"
+       data-testid="continue-shopping-success">
+      Continue Shopping
+    </a>
+    <a href="{{ url_for('profile.profile') }}" class="btn btn-outline"
+       data-testid="view-orders">
+      View My Orders
+    </a>
+  </div>
+
+</div>
+
+{% endblock %}

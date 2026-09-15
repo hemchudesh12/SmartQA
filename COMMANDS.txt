@@ -1,0 +1,100 @@
+===============================================================================
+SMARTQA — SETUP & EXECUTION COMMANDS GUIDE
+===============================================================================
+
+-------------------------------------------------------------------------------
+1. VIRTUAL ENVIRONMENT & DEPENDENCY SETUP (One-Time Setup)
+-------------------------------------------------------------------------------
+Open PowerShell or Command Prompt in the project root directory:
+
+# Navigate to project root directory
+cd "d:\Sem 7\ST\smartqa"
+
+# Create Python virtual environment (if not already created)
+python -m venv venv
+
+# Activate virtual environment (PowerShell)
+.\venv\Scripts\Activate.ps1
+
+# Activate virtual environment (Command Prompt / CMD)
+.\venv\Scripts\activate.bat
+
+# Install all required Python packages (Flask, Pytest, Playwright, etc.)
+pip install -r requirements.txt
+
+# Install Playwright browser binaries (Chromium)
+playwright install chromium
+
+
+-------------------------------------------------------------------------------
+2. DATABASE INITIALIZATION & SUT APP SERVER (Terminal 1)
+-------------------------------------------------------------------------------
+The Flask application (System Under Test) MUST be running on http://127.0.0.1:5000 
+before executing any automated tests.
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# (Optional) Manually seed/reset the database to default state
+python seed.py
+
+# Start the Flask web application
+python run.py
+
+
+-------------------------------------------------------------------------------
+3. RUNNING AUTOMATED TEST SUITE WITH PYTEST (Terminal 2)
+-------------------------------------------------------------------------------
+Open a SECOND terminal window to run tests while the Flask app is running.
+
+# Navigate to project root directory
+cd "d:\Sem 7\ST\smartqa"
+
+# Activate virtual environment
+.\venv\Scripts\Activate.ps1
+
+# Run the complete test suite (headless mode by default)
+pytest
+
+# Run tests with verbose output (shows individual test names and status)
+pytest -v
+
+
+-------------------------------------------------------------------------------
+4. FILTERING & SPECIFIC TEST RUN COMMANDS
+-------------------------------------------------------------------------------
+# Run tests by category marker:
+pytest -m smoke
+pytest -m regression
+pytest -m auth
+pytest -m cart
+pytest -m checkout
+
+# Run a single test file:
+pytest automation/tests/test_auth.py
+pytest automation/tests/test_products.py
+pytest automation/tests/test_search.py
+pytest automation/tests/test_cart.py
+pytest automation/tests/test_checkout.py
+pytest automation/tests/test_profile.py
+
+# Run a specific test function by name:
+pytest -k test_login_success
+pytest -k test_add_product_to_cart
+
+# Run tests in headed browser mode (visible browser window for debugging):
+pytest --headed
+
+# Run tests with slow motion delay (in milliseconds, e.g., 500ms delay):
+pytest --headed --slowmo 500
+
+
+-------------------------------------------------------------------------------
+5. VIEWING TEST REPORTS
+-------------------------------------------------------------------------------
+PyTest automatically generates an HTML report after test execution in `reports/report.html`.
+
+# Open the HTML report in your default browser (PowerShell command):
+Invoke-Item reports/report.html
+
+===============================================================================
