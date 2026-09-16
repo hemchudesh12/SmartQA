@@ -75,6 +75,12 @@ jobs:
         run: |
           python tools/train_model.py
 
+      - name: Evaluate Failure Predictor (Phase 6)
+        if: always()
+        continue-on-error: true
+        run: |
+          python tools/evaluate_model.py
+
       - name: Generate Prioritized Test Order (Phase 7)
         if: always()
         id: prioritize
@@ -105,13 +111,26 @@ jobs:
         run: |
           python tools/validate_dataset.py
 
-      - name: Upload SmartQA Data & Reports Artifacts
+      - name: Evaluate Prioritization (Phase 8)
+        if: always()
+        continue-on-error: true
+        run: |
+          python tools/evaluate_prioritization.py
+
+      - name: Run Phase 8 Unit Tests
+        if: always()
+        continue-on-error: true
+        run: |
+          python -m pytest tools/tests/test_evaluation.py -v --tb=short
+
+      - name: Upload SmartQA Data, Reports & Evaluation Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: smartqa-data-and-reports
           path: |
             data/
+            models/model_metadata.json
             reports/report.html
             reports/screenshots/
           retention-days: 14

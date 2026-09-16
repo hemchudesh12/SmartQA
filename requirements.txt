@@ -7,3 +7,9 @@ pytest==8.2.2
 playwright==1.44.0
 pytest-playwright==0.5.0
 pytest-html==4.1.1
+
+# Phase 6 — ML model training and prediction
+# scikit-learn brings numpy and scipy as transitive dependencies.
+# joblib is used for model serialisation (joblib.dump / joblib.load).
+scikit-learn>=1.3.0
+joblib>=1.3.0

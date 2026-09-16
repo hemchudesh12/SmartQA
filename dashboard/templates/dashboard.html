@@ -1,0 +1,987 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartQA Dashboard — Phase 8</title>
+    <meta name="description" content="SmartQA ML-Based Test Prioritization — Evaluation and Monitoring Dashboard">
+    <style>
+        /* ================================================================
+           SmartQA Dashboard — Phase 8
+           Clean, professional, data-driven. No external dependencies.
+           ================================================================ */
+
+        :root {
+            --color-bg: #f4f6f9;
+            --color-surface: #ffffff;
+            --color-border: #dde2ea;
+            --color-header-bg: #1e2a3a;
+            --color-header-text: #ffffff;
+            --color-accent: #2563eb;
+            --color-accent-light: #dbeafe;
+            --color-pass: #16a34a;
+            --color-pass-bg: #dcfce7;
+            --color-fail: #dc2626;
+            --color-fail-bg: #fee2e2;
+            --color-skip: #d97706;
+            --color-skip-bg: #fef3c7;
+            --color-high: #dc2626;
+            --color-high-bg: #fee2e2;
+            --color-medium: #d97706;
+            --color-medium-bg: #fef3c7;
+            --color-low: #16a34a;
+            --color-low-bg: #dcfce7;
+            --color-na: #6b7280;
+            --color-na-bg: #f3f4f6;
+            --color-text: #1f2937;
+            --color-text-secondary: #6b7280;
+            --color-text-muted: #9ca3af;
+            --font-mono: "Consolas", "Monaco", "Courier New", monospace;
+            --font-sans: "Segoe UI", "Arial", sans-serif;
+            --radius: 6px;
+            --shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            background: var(--color-bg);
+            color: var(--color-text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        /* ---- Header ---- */
+        header {
+            background: var(--color-header-bg);
+            color: var(--color-header-text);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        header .header-sub {
+            font-size: 12px;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+        header .header-meta {
+            text-align: right;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        header .header-meta strong {
+            color: #e2e8f0;
+        }
+
+        /* ---- Layout ---- */
+        main {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 24px 32px;
+        }
+
+        section {
+            margin-bottom: 28px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: var(--color-text-secondary);
+            margin-bottom: 12px;
+            padding-bottom: 6px;
+            border-bottom: 1px solid var(--color-border);
+        }
+
+        /* ---- Cards ---- */
+        .card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 16px 20px;
+            box-shadow: var(--shadow);
+        }
+
+        /* ---- Overview stats grid ---- */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+        }
+
+        .stat-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            box-shadow: var(--shadow);
+        }
+        .stat-card .stat-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .stat-card .stat-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--color-text);
+        }
+        .stat-card .stat-sub {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            margin-top: 4px;
+        }
+        .stat-card.accent { border-left: 3px solid var(--color-accent); }
+        .stat-card.pass   { border-left: 3px solid var(--color-pass); }
+        .stat-card.fail   { border-left: 3px solid var(--color-fail); }
+
+        /* ---- Tables ---- */
+        .table-wrapper {
+            overflow-x: auto;
+            border-radius: var(--radius);
+            border: 1px solid var(--color-border);
+            box-shadow: var(--shadow);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--color-surface);
+            font-size: 13px;
+        }
+
+        thead th {
+            background: #f8fafc;
+            padding: 10px 14px;
+            text-align: left;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-text-secondary);
+            border-bottom: 1px solid var(--color-border);
+            white-space: nowrap;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.1s;
+        }
+        tbody tr:hover { background: #f8fafc; }
+        tbody tr:last-child { border-bottom: none; }
+
+        td {
+            padding: 9px 14px;
+            vertical-align: middle;
+        }
+
+        .td-mono {
+            font-family: var(--font-mono);
+            font-size: 12px;
+            color: var(--color-text-secondary);
+        }
+
+        .td-rank {
+            font-weight: 700;
+            color: var(--color-text-muted);
+            font-size: 12px;
+            text-align: center;
+            width: 50px;
+        }
+
+        /* ---- Status badges ---- */
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        .badge-pass   { background: var(--color-pass-bg);   color: var(--color-pass); }
+        .badge-fail   { background: var(--color-fail-bg);   color: var(--color-fail); }
+        .badge-skip   { background: var(--color-skip-bg);   color: var(--color-skip); }
+        .badge-high   { background: var(--color-high-bg);   color: var(--color-high); }
+        .badge-medium { background: var(--color-medium-bg); color: var(--color-medium); }
+        .badge-low    { background: var(--color-low-bg);    color: var(--color-low); }
+        .badge-na     { background: var(--color-na-bg);     color: var(--color-na); }
+
+        /* ---- Two-column comparison ---- */
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 768px) {
+            .comparison-grid { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+
+        .comparison-pane {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .comparison-pane-header {
+            background: #f8fafc;
+            padding: 10px 14px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--color-text-secondary);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .comparison-pane-header.smartqa {
+            background: var(--color-accent-light);
+            color: var(--color-accent);
+        }
+        .comparison-list {
+            list-style: none;
+            max-height: 360px;
+            overflow-y: auto;
+        }
+        .comparison-list li {
+            display: flex;
+            align-items: center;
+            padding: 7px 14px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 12px;
+        }
+        .comparison-list li:last-child { border-bottom: none; }
+        .comparison-list li:hover { background: #f8fafc; }
+        .cl-rank {
+            width: 28px;
+            font-weight: 700;
+            color: var(--color-text-muted);
+            flex-shrink: 0;
+        }
+        .cl-name {
+            flex: 1;
+            font-family: var(--font-mono);
+            color: var(--color-text);
+            font-size: 11.5px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .cl-prob {
+            font-size: 11px;
+            color: var(--color-text-secondary);
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+        .highlight-row {
+            background: #fff7ed !important;
+            border-left: 3px solid var(--color-fail) !important;
+        }
+
+        /* ---- Progress bars ---- */
+        .progress-bar-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e5e7eb;
+            flex: 1;
+        }
+        .progress-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .bar-pass   { background: var(--color-pass); }
+        .bar-fail   { background: var(--color-fail); }
+        .bar-medium { background: var(--color-medium); }
+        .bar-low    { background: var(--color-low); }
+        .bar-accent { background: var(--color-accent); }
+
+        /* ---- Metric cards ---- */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .metric-card {
+            background: var(--color-surface);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            box-shadow: var(--shadow);
+        }
+        .metric-card .metric-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 6px;
+        }
+        .metric-card .metric-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--color-text);
+        }
+        .metric-card .metric-note {
+            font-size: 11px;
+            color: var(--color-text-muted);
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+        .metric-card.apfd-good .metric-value { color: var(--color-pass); }
+        .metric-card.apfd-na .metric-value   { color: var(--color-na); }
+
+        /* ---- Info / notice boxes ---- */
+        .notice {
+            padding: 10px 14px;
+            border-radius: var(--radius);
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 12px;
+        }
+        .notice-info {
+            background: var(--color-accent-light);
+            color: #1e40af;
+            border-left: 3px solid var(--color-accent);
+        }
+        .notice-warn {
+            background: var(--color-medium-bg);
+            color: #92400e;
+            border-left: 3px solid var(--color-medium);
+        }
+        .notice-success {
+            background: var(--color-pass-bg);
+            color: #14532d;
+            border-left: 3px solid var(--color-pass);
+        }
+
+        /* ---- Trend table ---- */
+        .trend-bar-wrap { display: flex; align-items: center; gap: 6px; }
+        .trend-bar { height: 6px; border-radius: 3px; background: #e5e7eb; width: 80px; }
+        .trend-bar-fill { height: 100%; border-radius: 3px; }
+
+        /* ---- Footer ---- */
+        footer {
+            text-align: center;
+            padding: 20px 32px;
+            font-size: 11px;
+            color: var(--color-text-muted);
+            border-top: 1px solid var(--color-border);
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- HEADER                                                            -->
+<!-- ================================================================ -->
+<header>
+    <div>
+        <h1>SmartQA Dashboard</h1>
+        <div class="header-sub">ML-Based Test Prioritization — Phase 8 Evaluation</div>
+    </div>
+    <div class="header-meta">
+        <div>Model: <strong>{{ overview.model_type }}</strong> &nbsp;|&nbsp;
+             Status: <strong>{{ overview.model_status }}</strong></div>
+        <div>Prioritization: <strong>{{ overview.prioritization_status }}</strong></div>
+        <div style="margin-top:4px;">Latest commit: <strong>{{ overview.latest_commit_sha }}</strong>
+             &mdash; {{ overview.latest_commit_message }}</div>
+    </div>
+</header>
+
+<main>
+
+<!-- ================================================================ -->
+<!-- SECTION 1: OVERVIEW                                               -->
+<!-- ================================================================ -->
+<section id="overview">
+    <div class="section-title">1. Overview</div>
+    <div class="stats-grid">
+        <div class="stat-card accent">
+            <div class="stat-label">Total Tests</div>
+            <div class="stat-value">{{ overview.total_tests }}</div>
+            <div class="stat-sub">Full test suite</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Predictions</div>
+            <div class="stat-value">{{ overview.predictions_available }} / {{ overview.total_tests }}</div>
+            <div class="stat-sub">{{ overview.predictions_missing }} without prediction</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Historical Runs</div>
+            <div class="stat-value">{{ overview.total_historical_runs }}</div>
+            <div class="stat-sub">Across {{ overview.total_commits }} commits</div>
+        </div>
+        <div class="stat-card {% if overview.total_observed_failures > 0 %}fail{% else %}pass{% endif %}">
+            <div class="stat-label">Observed Failures</div>
+            <div class="stat-value">{{ overview.total_observed_failures }}</div>
+            <div class="stat-sub">
+                {{ "%.4f" | format(overview.dataset_failure_rate_pct) }}% failure rate
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Author</div>
+            <div class="stat-value" style="font-size:16px;">{{ overview.latest_commit_author }}</div>
+            <div class="stat-sub">Latest commit author</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Timestamp</div>
+            <div class="stat-value" style="font-size:13px;">
+                {{ overview.latest_commit_timestamp[:10] if overview.latest_commit_timestamp != "N/A" else "N/A" }}
+            </div>
+            <div class="stat-sub">Latest commit date</div>
+        </div>
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 2: RISK DISTRIBUTION                                      -->
+<!-- ================================================================ -->
+<section id="risk-distribution">
+    <div class="section-title">2. Risk Distribution</div>
+    <div class="card">
+        {% if not overview.predictions_available %}
+        <div class="notice notice-warn">
+            No predictions available. Model may not be trained.
+            Run: <code>python tools/train_model.py</code> then
+            <code>python tools/prioritize_tests.py</code>.
+        </div>
+        {% else %}
+        <p style="font-size:12px; color: var(--color-text-secondary); margin-bottom:12px;">
+            Risk thresholds: &nbsp;
+            <span class="badge badge-high">High ≥ {{ risk_distribution.thresholds.High }}</span>&nbsp;
+            <span class="badge badge-medium">Medium ≥ {{ risk_distribution.thresholds.Medium }}</span>&nbsp;
+            <span class="badge badge-low">Low &lt; {{ risk_distribution.thresholds.Medium }}</span>&nbsp;
+            <span class="badge badge-na">No Prediction</span>
+        </p>
+        {% for item in risk_distribution.distribution %}
+        <div style="margin-bottom: 10px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                <span class="badge badge-{{ item.level | lower | replace(' ', '') | replace('prediction','na') }}">
+                    {{ item.level }}
+                </span>
+                <span style="font-size:13px; font-weight:700;">
+                    {{ item.count }} tests &nbsp;({{ item.percentage }}%)
+                </span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-bar-fill bar-{{ 'fail' if item.level == 'High' else 'medium' if item.level == 'Medium' else 'low' if item.level == 'Low' else 'na' }}"
+                     style="width: {{ item.percentage }}%; background: {{ '#dc2626' if item.level == 'High' else '#d97706' if item.level == 'Medium' else '#16a34a' if item.level == 'Low' else '#9ca3af' }};">
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+        <p style="font-size:11px; color:var(--color-text-muted); margin-top:8px;">
+            Total: {{ risk_distribution.total_tests }} tests.
+            Thresholds applied to <code>predicted_failure_probability</code>.
+        </p>
+        {% endif %}
+    </div>
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 3: TEST RISK TABLE                                        -->
+<!-- ================================================================ -->
+<section id="risk-table">
+    <div class="section-title">3. Test Risk — Full Priority List</div>
+    {% if not risk_table %}
+    <div class="notice notice-warn">
+        No prioritized test list found.
+        Run: <code>python tools/prioritize_tests.py</code>
+    </div>
+    {% else %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th style="text-align:center;">Rank</th>
+                    <th>Test Name</th>
+                    <th>Failure Probability</th>
+                    <th>Risk Level</th>
+                    <th>Predicted Label</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in risk_table %}
+                <tr>
+                    <td class="td-rank">{{ row.rank }}</td>
+                    <td>
+                        <span class="td-mono">{{ row.test_name }}</span>
+                    </td>
+                    <td>
+                        {% if row.prediction_available %}
+                            <strong>{{ row.failure_probability_pct }}</strong>
+                        {% else %}
+                            <span class="badge badge-na">N/A</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.risk_level == "High" %}
+                            <span class="badge badge-high">High</span>
+                        {% elif row.risk_level == "Medium" %}
+                            <span class="badge badge-medium">Medium</span>
+                        {% elif row.risk_level == "Low" %}
+                            <span class="badge badge-low">Low</span>
+                        {% else %}
+                            <span class="badge badge-na">No Prediction</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if row.predicted_label == "FAIL" %}
+                            <span class="badge badge-fail">FAIL</span>
+                        {% elif row.predicted_label == "PASS" %}
+                            <span class="badge badge-pass">PASS</span>
+                        {% else %}
+                            <span style="color:var(--color-text-muted);">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p style="font-size:11px; color:var(--color-text-muted); margin-top:6px;">
+        {{ risk_table | length }} tests listed in SmartQA priority order.
+        Tests without predictions are placed at the end, sorted alphabetically.
+    </p>
+    {% endif %}
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 4: LATEST EXECUTION RESULTS                               -->
+<!-- ================================================================ -->
+<section id="execution-results">
+    <div class="section-title">4. Test Execution Results — Latest Run</div>
+    {% if not latest_run.run_id %}
+    <div class="notice notice-warn">
+        No test results found.
+        Run the test suite to generate <code>data/test_results.jsonl</code>.
+    </div>
+    {% else %}
+    <div style="display:flex; gap:12px; flex-wrap:wrap; margin-bottom:12px;">
+        <div class="stat-card" style="flex:1; min-width:120px;">
+            <div class="stat-label">Run ID</div>
+            <div class="stat-value" style="font-size:13px; font-family:var(--font-mono);">
+                {{ latest_run.run_id }}
+            </div>
+            <div class="stat-sub">Commit: {{ latest_run.commit_sha }}</div>
+        </div>
+        <div class="stat-card pass" style="flex:0;">
+            <div class="stat-label">Pass</div>
+            <div class="stat-value">{{ latest_run.summary.pass }}</div>
+        </div>
+        <div class="stat-card {% if latest_run.summary.fail > 0 %}fail{% endif %}" style="flex:0;">
+            <div class="stat-label">Fail</div>
+            <div class="stat-value">{{ latest_run.summary.fail }}</div>
+        </div>
+        <div class="stat-card" style="flex:0;">
+            <div class="stat-label">Skip</div>
+            <div class="stat-value">{{ latest_run.summary.skip }}</div>
+        </div>
+        <div class="stat-card" style="flex:0;">
+            <div class="stat-label">Total</div>
+            <div class="stat-value">{{ latest_run.summary.total }}</div>
+        </div>
+    </div>
+    <div class="table-wrapper" style="max-height:320px; overflow-y:auto;">
+        <table>
+            <thead>
+                <tr>
+                    <th>Test Name</th>
+                    <th>Status</th>
+                    <th>Duration</th>
+                    <th>Failure Message</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in latest_run.rows %}
+                <tr>
+                    <td class="td-mono">{{ row.test_name }}</td>
+                    <td>
+                        <span class="badge badge-{{ row.status_class }}">{{ row.status }}</span>
+                    </td>
+                    <td style="color:var(--color-text-secondary);">{{ row.duration }}</td>
+                    <td style="font-size:11px; color:var(--color-fail); font-family:var(--font-mono);">
+                        {{ row.failure_message[:100] if row.failure_message else "" }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 5: BASELINE vs SMARTQA PRIORITIZATION                     -->
+<!-- ================================================================ -->
+<section id="prioritization">
+    <div class="section-title">5. Prioritization — Baseline vs SmartQA</div>
+    {% if not prioritization.available %}
+    <div class="notice notice-warn">
+        {{ prioritization.reason }}
+    </div>
+    {% else %}
+    <div class="notice notice-info">
+        <strong>Baseline</strong>: Default pytest test collection order (alphabetical by file then function).
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <strong>SmartQA</strong>: Tests ordered by predicted failure probability (highest risk first).
+        Tests without predictions are placed after ranked tests, sorted alphabetically.
+    </div>
+    <div class="comparison-grid">
+        <div class="comparison-pane">
+            <div class="comparison-pane-header">Baseline Order (pytest default)</div>
+            <ul class="comparison-list">
+                {% for item in prioritization.baseline_order %}
+                <li>
+                    <span class="cl-rank">{{ item.rank }}.</span>
+                    <span class="cl-name" title="{{ item.test_nodeid }}">{{ item.test_name }}</span>
+                </li>
+                {% endfor %}
+                {% if not prioritization.baseline_order %}
+                <li style="color:var(--color-text-muted);">No baseline data available.</li>
+                {% endif %}
+            </ul>
+        </div>
+        <div class="comparison-pane">
+            <div class="comparison-pane-header smartqa">SmartQA Priority Order</div>
+            <ul class="comparison-list">
+                {% for item in prioritization.smartqa_order %}
+                <li class="{{ 'highlight-row' if item.rank|string == '1' and item.prediction_available else '' }}">
+                    <span class="cl-rank">{{ item.rank }}.</span>
+                    <span class="cl-name" title="{{ item.test_nodeid }}">{{ item.test_name }}</span>
+                    {% if item.prediction_available %}
+                    <span class="cl-prob">{{ item.probability_display }}</span>
+                    {% else %}
+                    <span class="cl-prob" style="color:var(--color-text-muted);">—</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+                {% if not prioritization.smartqa_order %}
+                <li style="color:var(--color-text-muted);">No SmartQA order data available.</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+    <p style="font-size:11px; color:var(--color-text-muted); margin-top:8px;">
+        Highlighted row (orange border): highest risk test (rank 1 in SmartQA order).
+        Baseline order derived from first historical run in test_results.jsonl.
+        SmartQA order from data/prioritized_tests.csv.
+    </p>
+    {% endif %}
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 6: EVALUATION METRICS                                      -->
+<!-- ================================================================ -->
+<section id="evaluation">
+    <div class="section-title">6. Evaluation Metrics</div>
+
+    {% if not evaluation.available %}
+    <div class="notice notice-warn">
+        Evaluation not yet generated.
+        Run: <code>python tools/evaluate_prioritization.py</code><br>
+        Reason: {{ evaluation.reason }}
+    </div>
+    {% else %}
+
+    <!-- Evaluation type notice -->
+    <div class="notice notice-info" style="margin-bottom:12px;">
+        <strong>Evaluation type: {{ evaluation.evaluation_type | capitalize }}</strong><br>
+        {{ evaluation.evaluation_note }}
+    </div>
+
+    {% if evaluation.status == "limited_data" %}
+    <div class="notice notice-warn" style="margin-bottom:12px;">
+        <strong>Limited data.</strong> {{ evaluation.status_note }}
+    </div>
+    {% endif %}
+
+    <!-- First-failure rank comparison -->
+    <div style="margin-bottom:16px;">
+        <h3 style="font-size:13px; font-weight:600; color:var(--color-text-secondary); margin-bottom:8px;">
+            First-Failure Rank Comparison
+        </h3>
+        {% if not evaluation.failure_runs %}
+        <div class="notice notice-info">
+            No genuine failures found in historical runs.
+            First-failure metrics are unavailable.<br>
+            This is an honest result with the current dataset ({{ evaluation.summary.total_failures }} failures observed).
+        </div>
+        {% else %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Run ID</th>
+                        <th>Commit</th>
+                        <th>Tests</th>
+                        <th>Failures</th>
+                        <th>Baseline — First Failure</th>
+                        <th>SmartQA — First Failure</th>
+                        <th>Tests Earlier</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in evaluation.failure_runs %}
+                    <tr>
+                        <td class="td-mono" style="font-size:11px;">{{ r.run_id }}</td>
+                        <td class="td-mono">{{ r.commit_sha[:12] if r.commit_sha else "N/A" }}</td>
+                        <td>{{ r.total_tests }}</td>
+                        <td><span class="badge badge-fail">{{ r.total_failures }}</span></td>
+                        <td>
+                            {% if r.baseline_first_failure_rank %}
+                                <strong>{{ r.baseline_first_failure_rank }}</strong> / {{ r.total_tests }}
+                                <span style="font-size:11px; color:var(--color-text-secondary);">
+                                    ({{ "%.1f" | format(r.baseline_first_failure_fraction * 100) }}%)
+                                </span>
+                            {% else %}
+                                <span class="badge badge-na">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.smartqa_first_failure_rank %}
+                                <strong>{{ r.smartqa_first_failure_rank }}</strong> / {{ r.total_tests }}
+                                <span style="font-size:11px; color:var(--color-text-secondary);">
+                                    ({{ "%.1f" | format(r.smartqa_first_failure_fraction * 100) }}%)
+                                </span>
+                            {% else %}
+                                <span class="badge badge-na">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if r.first_failure_rank_improvement is not none %}
+                                {% if r.first_failure_rank_improvement > 0 %}
+                                    <span style="color:var(--color-pass); font-weight:700;">
+                                        &minus;{{ r.first_failure_rank_improvement }}
+                                    </span>
+                                {% elif r.first_failure_rank_improvement == 0 %}
+                                    <span style="color:var(--color-text-muted);">0</span>
+                                {% else %}
+                                    <span style="color:var(--color-fail); font-weight:700;">
+                                        +{{ r.first_failure_rank_improvement | abs }}
+                                    </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge badge-na">N/A</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% for r in evaluation.failure_runs %}
+        {% if r.observation %}
+        <p style="font-size:11px; color:var(--color-text-secondary); margin-top:6px;">
+            <em>{{ r.observation }}</em>
+        </p>
+        {% endif %}
+        {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- APFD -->
+    <div style="margin-bottom:16px;">
+        <h3 style="font-size:13px; font-weight:600; color:var(--color-text-secondary); margin-bottom:8px;">
+            APFD (Average Percentage of Faults Detected)
+        </h3>
+        {% set apfd_status = evaluation.summary.apfd_status %}
+        {% if apfd_status == "computed_retrospective" %}
+        <div class="metrics-grid">
+            <div class="metric-card apfd-good">
+                <div class="metric-label">Baseline APFD</div>
+                <div class="metric-value">
+                    {{ "%.4f" | format(evaluation.summary.baseline_apfd) if evaluation.summary.baseline_apfd is not none else "N/A" }}
+                </div>
+                <div class="metric-note">Default pytest order</div>
+            </div>
+            <div class="metric-card apfd-good">
+                <div class="metric-label">SmartQA APFD</div>
+                <div class="metric-value">
+                    {{ "%.4f" | format(evaluation.summary.smartqa_apfd) if evaluation.summary.smartqa_apfd is not none else "N/A" }}
+                </div>
+                <div class="metric-note">ML-prioritized order</div>
+            </div>
+        </div>
+        <div class="notice notice-warn" style="margin-top:10px;">
+            <strong>APFD note:</strong> {{ evaluation.summary.apfd_note }}
+        </div>
+        {% else %}
+        <div class="metric-card apfd-na">
+            <div class="metric-label">APFD</div>
+            <div class="metric-value">N/A</div>
+            <div class="metric-note">{{ evaluation.summary.apfd_note }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Phase 6 model metrics -->
+    {% if evaluation.model_metrics.available %}
+    <div>
+        <h3 style="font-size:13px; font-weight:600; color:var(--color-text-secondary); margin-bottom:8px;">
+            Phase 6 Model Evaluation (Classification Metrics)
+        </h3>
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="metric-label">Accuracy</div>
+                <div class="metric-value">{{ evaluation.model_metrics.accuracy }}</div>
+                <div class="metric-note">Overall prediction correctness</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Precision (FAIL class)</div>
+                <div class="metric-value" style="font-size:13px;">
+                    {{ evaluation.model_metrics.precision_fail
+                       if evaluation.model_metrics.precision_fail is not string
+                       else "N/A" }}
+                </div>
+                <div class="metric-note">
+                    {% if evaluation.model_metrics.precision_fail is string %}
+                        {{ evaluation.model_metrics.precision_fail[:80] }}
+                    {% endif %}
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">Recall (FAIL class)</div>
+                <div class="metric-value" style="font-size:13px;">
+                    {{ evaluation.model_metrics.recall_fail
+                       if evaluation.model_metrics.recall_fail is not string
+                       else "N/A" }}
+                </div>
+                <div class="metric-note">Primary metric for SmartQA</div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-label">ROC-AUC</div>
+                <div class="metric-value" style="font-size:13px;">
+                    {{ evaluation.model_metrics.roc_auc
+                       if evaluation.model_metrics.roc_auc is not string
+                       else "N/A" }}
+                </div>
+                <div class="metric-note">
+                    {% if evaluation.model_metrics.roc_auc is string %}
+                        {{ evaluation.model_metrics.roc_auc[:60] }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% if evaluation.model_metrics.note %}
+        <div class="notice notice-warn" style="margin-top:10px;">
+            {{ evaluation.model_metrics.note }}
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="notice notice-warn">
+        Model evaluation not found.
+        Run: <code>python tools/evaluate_model.py</code><br>
+        {{ evaluation.model_metrics.reason }}
+    </div>
+    {% endif %}
+    {% endif %}
+</section>
+
+<!-- ================================================================ -->
+<!-- SECTION 7: HISTORICAL TREND                                        -->
+<!-- ================================================================ -->
+<section id="historical-trend">
+    <div class="section-title">7. Historical Trend</div>
+    {% if not historical_trend %}
+    <div class="notice notice-warn">
+        No historical data available. Run the test suite to populate
+        <code>data/test_results.jsonl</code>.
+    </div>
+    {% elif historical_trend | length < 2 %}
+    <div class="notice notice-info">
+        Only {{ historical_trend | length }} run(s) recorded.
+        A meaningful trend requires more runs over time.
+    </div>
+    {% endif %}
+
+    {% if historical_trend %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Run ID</th>
+                    <th>Commit</th>
+                    <th>Total</th>
+                    <th>Pass</th>
+                    <th>Fail</th>
+                    <th>Fail Rate</th>
+                    <th>Avg Duration</th>
+                    <th>Pass / Fail Bar</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for run in historical_trend %}
+                <tr>
+                    <td class="td-mono" style="font-size:11px;">{{ run.run_id }}</td>
+                    <td class="td-mono">{{ run.commit_sha }}</td>
+                    <td>{{ run.total_tests }}</td>
+                    <td style="color:var(--color-pass); font-weight:600;">{{ run.pass_count }}</td>
+                    <td style="color:{{ 'var(--color-fail)' if run.fail_count > 0 else 'var(--color-text-muted)' }}; font-weight:600;">
+                        {{ run.fail_count }}
+                    </td>
+                    <td>
+                        {% if run.fail_rate_pct > 0 %}
+                            <span class="badge badge-fail">{{ run.fail_rate_pct }}%</span>
+                        {% else %}
+                            <span class="badge badge-pass">0%</span>
+                        {% endif %}
+                    </td>
+                    <td style="color:var(--color-text-secondary);">{{ run.avg_duration_sec }}s</td>
+                    <td>
+                        {% if run.total_tests > 0 %}
+                        <div style="display:flex; gap:2px; align-items:center;">
+                            <div style="width:{{ (run.pass_count / run.total_tests * 80) | int }}px;
+                                        height:8px; background:var(--color-pass); border-radius:3px;">
+                            </div>
+                            {% if run.fail_count > 0 %}
+                            <div style="width:{{ (run.fail_count / run.total_tests * 80) | int | max(4) }}px;
+                                        height:8px; background:var(--color-fail); border-radius:3px;">
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p style="font-size:11px; color:var(--color-text-muted); margin-top:6px;">
+        {{ historical_trend | length }} runs recorded.
+        Bar width is proportional to test count.
+    </p>
+    {% endif %}
+</section>
+
+</main>
+
+<footer>
+    SmartQA Phase 8 Dashboard &mdash; Data read from <code>data/</code> and <code>models/</code> directories.
+    This dashboard presents actual generated data only. No values are fabricated.
+    Refresh the page after regenerating artifacts to see updated results.
+</footer>
+
+</body>
+</html>

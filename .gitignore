@@ -52,4 +52,5 @@ data/evaluation_report.json
 data/prioritized_tests.csv
 data/prioritized_nodeids.txt
 
-
+# Phase 8 — Evaluation outputs (regeneratable)
+data/prioritization_evaluation.json

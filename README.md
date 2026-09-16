@@ -618,3 +618,196 @@ This is enforced by the prioritization engine design: the `prioritize()` functio
 2. Alphabetical fallback is still deterministic and correct — all tests are preserved
 3. Test discovery requires Python environment with test dependencies installed
 4. Shell array approach in CI uses `mapfile` (bash-specific, standard on ubuntu-latest)
+
+---
+
+## Phase 8 — Integration, Evaluation, and Dashboard
+
+Phase 8 completes the SmartQA pipeline by adding a retrospective evaluation framework and a local monitoring dashboard.
+
+### Components
+
+#### 1. Prioritization Evaluation (`tools/evaluate_prioritization.py`)
+
+Computes empirical metrics comparing baseline vs SmartQA test ordering using real historical data.
+
+```bash
+python tools/evaluate_prioritization.py
+```
+
+**Evaluation Type: RETROSPECTIVE**
+
+The evaluation answers: *"If we had used the SmartQA prioritized order in historical runs that had failures, would we have detected failures sooner?"*
+
+This is NOT a prospective (blind holdout) evaluation. The current dataset has limited failure diversity (1 genuine failure in 144 rows), so results are informative but should be interpreted with caution.
+
+**Metrics computed:**
+
+| Metric | Description |
+|---|---|
+| First-failure rank (baseline) | Position of first failure in default pytest order |
+| First-failure rank (SmartQA) | Position of first failure in SmartQA priority order |
+| First-failure fraction | Rank / total tests (lower = faster detection) |
+| First-failure rank improvement | Baseline rank − SmartQA rank (positive = SmartQA wins) |
+| APFD (baseline) | Average Percentage of Faults Detected — baseline order |
+| APFD (SmartQA) | Average Percentage of Faults Detected — SmartQA order |
+
+**APFD formula:**
+
+```
+APFD = 1 - (ΣTFi) / (n × m) + 1 / (2n)
+
+where:
+    TFi = 1-based position of the i-th failing test
+    n   = total tests in ordering
+    m   = total failing tests
+
+APFD = 1.0 → all failures appear first (perfect prioritization)
+APFD = 0.0 → all failures appear last (worst possible order)
+```
+
+**Honest Limitations:**
+
+- 1 genuine failure in the dataset: APFD is computed on a single data point and has high variance
+- The model training set includes the failure commit — evaluation is retrospective, not fully independent
+- More failure data is required for statistically meaningful evaluation
+- The pipeline is complete and correct; results will improve as more historical failures accumulate
+
+#### 2. Dashboard (`dashboard/app.py`)
+
+A local Flask dashboard that reads SmartQA-generated artifacts and presents them in a clean, structured interface.
+
+```bash
+python dashboard/app.py
+```
+
+Dashboard available at: **http://127.0.0.1:5001/**
+
+The dashboard is READ-ONLY. It never writes to any data files and does not connect to the main application (port 5000).
+
+**Dashboard Sections:**
+
+| Section | Description |
+|---|---|
+| 1. Overview | Stats: total tests, predictions, runs, commits, failures, model status |
+| 2. Risk Distribution | Count of tests by risk tier (High / Medium / Low / No Prediction) |
+| 3. Test Risk Table | Full prioritized list with failure probability and risk badge |
+| 4. Execution Results | Latest test run — PASS/FAIL/SKIP per test with duration |
+| 5. Prioritization Comparison | Side-by-side baseline vs SmartQA order |
+| 6. Evaluation Metrics | First-failure ranks, APFD, Phase 6 model classification metrics |
+| 7. Historical Trend | Per-run fail rate and test count across all historical runs |
+
+**JSON API endpoints:**
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/overview` | Overview statistics |
+| `GET /api/risk` | Full test risk table |
+| `GET /api/risk-distribution` | Risk tier counts |
+| `GET /api/latest-run` | Latest run results |
+| `GET /api/trend` | Historical trend data |
+| `GET /api/prioritization` | Baseline vs SmartQA comparison |
+| `GET /api/evaluation` | Evaluation metrics |
+
+#### 3. Phase 8 Unit Tests (`tools/tests/test_evaluation.py`)
+
+38 unit tests covering the evaluation module. All test data is labeled as FIXTURE DATA — synthetic data for mathematical verification only.
+
+```bash
+python -m pytest tools/tests/test_evaluation.py -v
+```
+
+Tests cover:
+- `first_failure_position` — 7 tests (boundary cases, empty inputs, multiple failures)
+- `compute_apfd` — 9 tests (formula correctness, boundary values, monotonicity)
+- `apply_smartqa_order_to_run` — 6 tests (ordering, no-test-drop guarantee)
+- `evaluate_run` — 5 tests (metrics, schema validation, no fabrication)
+- `compute_dataset_stats` — 5 tests (counting, failure rate formula)
+- Grouping helpers — 5 tests
+- File loading — 5 tests (missing file, empty file, malformed JSONL)
+- Dashboard data loader — 8 tests (all graceful-default contracts)
+
+### Pipeline Execution — Phase 8
+
+```bash
+# 1. Run full pipeline (Phases 4–7 must be run first)
+python tools/collect_git_metadata.py
+python tools/build_features.py
+python tools/train_model.py
+python tools/evaluate_model.py
+python tools/prioritize_tests.py
+
+# 2. Phase 8 — Compute prioritization evaluation
+python tools/evaluate_prioritization.py
+
+# 3. Phase 8 — Run Phase 8 unit tests
+python -m pytest tools/tests/test_evaluation.py -v
+
+# 4. Phase 8 — Run all SmartQA tool tests
+python -m pytest tools/tests/ -v
+
+# 5. Phase 8 — Start monitoring dashboard
+python dashboard/app.py
+# → http://127.0.0.1:5001/
+```
+
+### Generated Artifacts
+
+| File | Phase | Description |
+|---|---|---|
+| `data/prioritization_evaluation.json` | 8 | Retrospective evaluation: first-failure ranks, APFD, dataset stats |
+
+### CI Integration
+
+Phase 8 adds the following steps to the GitHub Actions pipeline:
+
+```
+...Phase 7 prioritization...
+       ↓
+Evaluate Failure Predictor (Phase 6, continue-on-error)
+       ↓
+Run PyTest Suite — Prioritized Order
+       ↓
+Build ML Dataset (Phase 4 denormalization)
+       ↓
+Validate Dataset Integrity (Phase 4)
+       ↓
+Evaluate Prioritization (Phase 8, continue-on-error)
+       ↓
+Run Phase 8 Unit Tests (continue-on-error)
+       ↓
+Upload Artifacts (data/, models/model_metadata.json, reports/)
+```
+
+All Phase 8 CI steps use `continue-on-error: true` so that missing data (e.g., no failures yet) never blocks the pipeline.
+
+### Project Structure (Phase 8 additions)
+
+```
+smartqa/
+├── tools/
+│   ├── evaluate_prioritization.py     [NEW Phase 8] Retrospective evaluation
+│   └── tests/
+│       └── test_evaluation.py         [NEW Phase 8] 38 evaluation unit tests
+├── dashboard/
+│   ├── __init__.py                    [NEW Phase 8] Package init
+│   ├── app.py                         [NEW Phase 8] Flask dashboard server (port 5001)
+│   ├── data_loader.py                 [NEW Phase 8] Read-only artifact loading layer
+│   └── templates/
+│       └── dashboard.html             [NEW Phase 8] Dashboard UI
+├── data/
+│   └── prioritization_evaluation.json [NEW Phase 8 output, gitignored]
+├── requirements.txt                   [MODIFIED] Added scikit-learn, joblib
+├── .gitignore                         [MODIFIED] Added Phase 8 artifact
+└── .github/workflows/
+    └── smartqa-tests.yml              [MODIFIED] Added Phase 8 CI steps
+```
+
+### Scientific Honesty — Phase 8 Constraints
+
+Consistent with the project's honesty requirements:
+
+1. **No fabricated metrics** — All metrics come from actual `data/test_results.jsonl` and `data/prioritized_tests.csv`. Dashboard shows `N/A` when data is absent.
+2. **Limitations disclosed** — Every evaluation output includes a `note` field explaining the retrospective nature and limited-failure-data constraints.
+3. **Graceful degradation** — All tools produce a valid empty output (not an error) when data is insufficient. CI never blocks on missing evaluation data.
+4. **Fixture labeling** — All synthetic data in test_evaluation.py is explicitly labeled `[FIXTURE]` in docstrings.
